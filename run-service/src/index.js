@@ -5,6 +5,7 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
+app.use(express.static("public"));
 
 const mongoHost = process.env.MONGO_HOST || "localhost";
 const statisticsServiceUrl =

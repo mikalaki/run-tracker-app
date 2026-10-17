@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Tracker</title>
+</head>
+
+<body>
+
+    <h1>Run Tracker</h1>
+
+    <h2>Add Run</h2>
+
+    <form id="run-form">
+        <label>
+            Distance (km):
+            <input
+                id="distance"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+            >
+        </label>
+
+        <br><br>
+
+        <label>
+            Duration (minutes):
+            <input
+                id="duration"
+                type="number"
+                step="0.1"
+                min="0"
+                required
+            >
+        </label>
+
+        <br><br>
+
+        <label>
+            Date and time started:
+            <input
+                id="started-at"
+                type="datetime-local"
+                required
+            >
+        </label>
+
+        <br><br>
+
+        <button type="submit">Add Run</button>
+    </form>
+
+    <hr>
+
+    <h2>Runs</h2>
+
+    <div id="runs"></div>
+
+    <hr>
+
+    <h2>Statistics</h2>
+
+    <p>
+        Number of runs:
+        <span id="number-of-runs">0</span>
+    </p>
+
+    <p>
+        Total distance:
+        <span id="total-distance">0</span> km
+    </p>
+
+    <p>
+        Total duration:
+        <span id="total-duration">0</span> minutes
+    </p>
+
+    <p>
+        Average run pace:
+        <span id="average-pace">0</span> min/km
+    </p>
+
+    <script>
+        const runForm = document.getElementById("run-form");
+
+        async function loadRuns() {
+            const response = await fetch("/runs");
+            const runs = await response.json();
+
+            const runsElement = document.getElementById("runs");
+            runsElement.innerHTML = "";
+
+            for (const run of runs) {
+                const runElement = document.createElement("p");
+
+                const date = new Date(run.startedAt).toLocaleString();
+                const pace = run.durationMinutes / run.distanceKm;
+
+                runElement.textContent =
+                    `${date} - ${run.distanceKm} km - ` +
+                    `${run.durationMinutes} min - ` +
+                    `${pace.toFixed(2)} min/km`;
+
+                runsElement.appendChild(runElement);
+            }
+        }
+
+        async function loadStatistics() {
+            const response = await fetch("/statistics");
+
+            if (!response.ok) {
+                console.error("Failed to load statistics");
+                return;
+            }
+
+            const statistics = await response.json();
+
+            document.getElementById("number-of-runs").textContent =
+                statistics.numberOfRuns;
+
+            document.getElementById("total-distance").textContent =
+                statistics.totalDistanceKm;
+
+            document.getElementById("total-duration").textContent =
+                statistics.totalDurationMinutes;
+
+            document.getElementById("average-pace").textContent =
+                statistics.averageRunPaceMinPerKm.toFixed(2);
+        }
+
+        runForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const distanceKm =
+                Number(document.getElementById("distance").value);
+
+            const durationMinutes =
+                Number(document.getElementById("duration").value);
+
+            const startedAt =
+                document.getElementById("started-at").value;
+
+            const response = await fetch("/runs", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    distanceKm,
+                    durationMinutes,
+                    startedAt
+                })
+            });
+
+            if (!response.ok) {
+                alert("Failed to add run");
+                return;
+            }
+
+            runForm.reset();
+
+            await loadRuns();
+            await loadStatistics();
+        });
+
+        loadRuns();
+        loadStatistics();
+    </script>
+
+</body>
+</html>
