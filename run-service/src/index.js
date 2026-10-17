@@ -7,6 +7,8 @@ const port = 3000;
 app.use(express.json());
 
 const mongoHost = process.env.MONGO_HOST || "localhost";
+const statisticsServiceUrl =
+    process.env.STATISTICS_SERVICE_URL || "http://localhost:3001";
 
 const runSchema = new mongoose.Schema({
     distanceKm: {
@@ -57,6 +59,39 @@ app.post("/runs", async (req, res) => {
     } catch (error) {
         console.error("Failed to create run:", error);
         res.status(500).json({ error: "Failed to create run" });
+    }
+});
+
+app.get("/statistics", async (req, res) => {
+    try {
+        const runs = await Run.find();
+
+        const response = await fetch(
+            `${statisticsServiceUrl}/statistics`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ runs })
+            }
+        );
+
+        if (!response.ok) {
+            return res.status(502).json({
+                error: "Statistics service failed"
+            });
+        }
+
+        const statistics = await response.json();
+
+        res.json(statistics);
+    } catch (error) {
+        console.error("Failed to get statistics:", error);
+
+        res.status(500).json({
+            error: "Failed to get statistics"
+        });
     }
 });
 
